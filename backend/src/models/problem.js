@@ -17,24 +17,10 @@ const problemSchema = new mongoose.Schema(
             trim: true,
         },
 
-        statement: {
+        storagePath: {
             type: String,
             required: true,
-        },
-
-        inputFormat: {
-            type: String,
-            required: true,
-        },
-
-        outputFormat: {
-            type: String,
-            required: true,
-        },
-
-        constraints: {
-            type: String,
-            default: "",
+            trim: true,
         },
 
         difficulty: {
@@ -51,14 +37,12 @@ const problemSchema = new mongoose.Schema(
         ],
 
         timeLimit: {
-            type: Number, // milliseconds
-            required: true,
+            type: Number,
             default: 1000,
         },
 
         memoryLimit: {
-            type: Number, // MB
-            required: true,
+            type: Number,
             default: 256,
         },
 
@@ -66,11 +50,6 @@ const problemSchema = new mongoose.Schema(
             type: String,
             enum: ["exact", "floating"],
             default: "exact",
-        },
-
-        storagePath: {
-            type: String,
-            required: true,
         },
 
         sampleTestcaseCount: {
@@ -85,7 +64,7 @@ const problemSchema = new mongoose.Schema(
 
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
+            ref: "userModel",
             required: true,
         },
 
@@ -99,8 +78,5 @@ const problemSchema = new mongoose.Schema(
     }
 );
 
-problemSchema.index({ slug: 1 });
-problemSchema.index({ difficulty: 1 });
-problemSchema.index({ tags: 1 });
-
-export default mongoose.model("Problem", problemSchema);
+const problemModel = mongoose.model("Problem", problemSchema);
+export default problemModel;
