@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import Problem from "../models/problem.js";
+import problemModel from "../models/problem.js";
 
 function sanitizeSlug(slug) {
     const normalized = String(slug || "")
@@ -24,7 +24,7 @@ export async function create(problemData, user) {
         throw new Error("Title is required");
     }
 
-    const existingProblem = await Problem.findOne({
+    const existingProblem = await problemModel.findOne({
         $or: [{ title }, { slug }],
     });
 
@@ -38,7 +38,7 @@ export async function create(problemData, user) {
     await fs.mkdir(path.join(fullPath, "samples"), { recursive: true });
     await fs.mkdir(path.join(fullPath, "hidden"), { recursive: true });
 
-    const problem = await Problem.create({
+    const problem = await problemModel.create({
         title,
         slug,
         storagePath,
@@ -49,14 +49,14 @@ export async function create(problemData, user) {
 }
 
 export async function fetch() {
-    const problems = await Problem.find()
+    const problems = await problemModel.find()
         .populate("createdBy", "name email")
         .sort({ createdAt: -1 });
 
     return problems;
 }
 export async function getBySlug(slug) {
-    const problem = await Problem.findOne({ slug })
+    const problem = await problemModel.findOne({ slug })
         .populate("createdBy", "username email");
 
     if (!problem) {
