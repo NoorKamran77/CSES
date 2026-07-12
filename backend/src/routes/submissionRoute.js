@@ -5,5 +5,7 @@ const submissionRouter = express.Router();
 
 submissionRouter.use(requireAuth);
 
-submissionRouter.post("/:slug", submissionController.submit);
+submissionRouter.post("/:slug/submit", submissionController.submit);
+submissionRouter.get("/submissions", submissionController.getAll);
+submissionRouter.get("/submissions/:id", submissionController.getById);
 export default submissionRouter;
