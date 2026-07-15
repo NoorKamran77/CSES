@@ -10,6 +10,6 @@ const sessionSchema = new mongoose.Schema({
     timestamps: true
 });
 
-const Session = mongoose.model('Session', sessionSchema);
+const Session = mongoose.model('Sessions', sessionSchema);
 
 export default Session;

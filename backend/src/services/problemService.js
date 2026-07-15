@@ -33,7 +33,11 @@ export async function create(problemData, user) {
     }
 
     const storagePath = path.posix.join("storage", "problems", slug);
-    const fullPath = path.resolve(process.cwd(), storagePath);
+    const fullPath = path.resolve(
+        process.cwd(),
+        "..",
+        storagePath
+    );
 
     await fs.mkdir(path.join(fullPath, "samples"), { recursive: true });
     await fs.mkdir(path.join(fullPath, "hidden"), { recursive: true });
