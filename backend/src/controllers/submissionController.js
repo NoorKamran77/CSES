@@ -1,6 +1,7 @@
 import submissionModel from "../models/submission.js";
 import problemModel from "../models/problem.js";
 import mongoose from "mongoose";
+import submissionQueue from "../queue/submissionQueue.js"
 export async function submit(req, res) {
     try {
         const { slug } = req.params;
@@ -23,17 +24,20 @@ export async function submit(req, res) {
             sourceCode,
             status: "Pending"
         });
-
+        const job = await submissionQueue.add("submissionID", {
+            submissionId: submission._id.toString(),
+        });
         return res.status(201).json({
             success: true,
-            data: submission,
+            message: "Submission queued successfully",
+            submission,
+            jobId: job.id,
         });
 
     } catch (err) {
-        console.error(err);
         return res.status(500).json({
             success: false,
-            message: err.message
+            error: err.message,
         });
     }
 }

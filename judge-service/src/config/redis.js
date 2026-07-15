@@ -1,18 +1,17 @@
-app.get("/test", async (req, res) => {
-    try {
-        const job = await submissionQueue.add("hello", {
-            message: "Hello Worker"
-        });
+import Redis from "ioredis";
 
-        res.status(200).json({
-            success: true,
-            jobId: job.id,
-            message: "Job added successfully"
-        });
-    } catch (err) {
-        res.status(500).json({
-            success: false,
-            error: err.message
-        });
-    }
+const connection = new Redis({
+    host: "127.0.0.1",
+    port: 6379,
+    maxRetriesPerRequest: null,
 });
+
+connection.on("connect", () => {
+    console.log("Redis Connected");
+});
+
+connection.on("error", (err) => {
+    console.log(err);
+});
+
+export default connection;
