@@ -1,66 +1,126 @@
 import submissionModel from "../models/submission.js";
 import problemModel from "../models/problem.js";
 import mongoose from "mongoose";
-import submissionQueue from "../queue/submissionQueue.js"
-export async function submit(req, res) {
+import submissionQueue from "../queue/submissionQueue.js";
+
+const SUPPORTED_LANGUAGES = ["cpp", "python", "java", "javascript"];
+
+export async function submit(req, res, next) {
     try {
         const { slug } = req.params;
+        const { language, sourceCode } = req.body;
+
+        if (!language || !SUPPORTED_LANGUAGES.includes(language)) {
+            return res.status(400).json({
+                success: false,
+                message: `Unsupported language. Allowed: ${SUPPORTED_LANGUAGES.join(", ")}`
+            });
+        }
+
+        if (!sourceCode || typeof sourceCode !== "string" || !sourceCode.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "sourceCode is required and cannot be empty"
+            });
+        }
 
         const problem = await problemModel.findOne({ slug });
-
         if (!problem) {
             return res.status(404).json({
                 success: false,
                 message: "Problem not found"
             });
         }
-        const user = req.user;
-        const { language, sourceCode } = req.body;
 
         const submission = await submissionModel.create({
-            userId: user._id,
+            userId: req.user._id,
             problemId: problem._id,
             language,
             sourceCode,
             status: "Pending"
         });
-        const job = await submissionQueue.add("submissionID", {
-            submissionId: submission._id.toString(),
-        });
+
+        let jobId = null;
+        try {
+            const job = await submissionQueue.add("judge-submission", {
+                submissionId: submission._id.toString(),
+            });
+            jobId = job?.id;
+        } catch (queueErr) {
+            console.warn("Queue notice: Redis is offline or unreachable. Submission created in MongoDB.", queueErr.message);
+        }
+
         return res.status(201).json({
             success: true,
             message: "Submission queued successfully",
-            submission,
-            jobId: job.id,
+            submission: {
+                id: submission._id,
+                problemId: problem._id,
+                slug: problem.slug,
+                language: submission.language,
+                status: submission.status,
+                createdAt: submission.createdAt,
+            },
+            jobId: jobId || "offline-queued",
         });
 
+
     } catch (err) {
-        return res.status(500).json({
-            success: false,
-            error: err.message,
-        });
+        next(err);
     }
 }
-export async function getAll(req, res) {
+
+export async function getAll(req, res, next) {
     try {
-        const submissions = await submissionModel
-            .find()
-            .populate("userId", "username email")
-            .populate("problemId", "title slug");
+        const { problemId, slug, userId, status, page = 1, limit = 20 } = req.query;
+        const query = {};
+
+        if (problemId && mongoose.Types.ObjectId.isValid(problemId)) {
+            query.problemId = problemId;
+        } else if (slug) {
+            const prob = await problemModel.findOne({ slug });
+            if (prob) {
+                query.problemId = prob._id;
+            }
+        }
+
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            query.userId = userId;
+        }
+
+        if (status) {
+            query.status = status;
+        }
+
+        const pageNum = Math.max(1, parseInt(page, 10) || 1);
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+        const skip = (pageNum - 1) * limitNum;
+
+        const [submissions, total] = await Promise.all([
+            submissionModel
+                .find(query)
+                .populate("userId", "username email")
+                .populate("problemId", "title slug difficulty")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNum),
+            submissionModel.countDocuments(query)
+        ]);
 
         return res.status(200).json({
             success: true,
+            total,
+            page: pageNum,
+            totalPages: Math.ceil(total / limitNum),
+            limit: limitNum,
             data: submissions
         });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        next(error);
     }
 }
-export async function getById(req, res) {
+
+export async function getById(req, res, next) {
     try {
         const { id } = req.params;
 
@@ -71,7 +131,9 @@ export async function getById(req, res) {
             });
         }
 
-        const submission = await submissionModel.findById(id);
+        const submission = await submissionModel.findById(id)
+            .populate("userId", "username email")
+            .populate("problemId", "title slug difficulty timeLimit memoryLimit");
 
         if (!submission) {
             return res.status(404).json({
@@ -85,9 +147,47 @@ export async function getById(req, res) {
             data: submission,
         });
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+        next(error);
     }
 }
+
+export async function getMySubmissions(req, res, next) {
+    try {
+        const { slug, problemId, page = 1, limit = 20 } = req.query;
+        const query = { userId: req.user._id };
+
+        if (problemId && mongoose.Types.ObjectId.isValid(problemId)) {
+            query.problemId = problemId;
+        } else if (slug) {
+            const prob = await problemModel.findOne({ slug });
+            if (prob) {
+                query.problemId = prob._id;
+            }
+        }
+
+        const pageNum = Math.max(1, parseInt(page, 10) || 1);
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+        const skip = (pageNum - 1) * limitNum;
+
+        const [submissions, total] = await Promise.all([
+            submissionModel
+                .find(query)
+                .populate("problemId", "title slug difficulty")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNum),
+            submissionModel.countDocuments(query)
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            total,
+            page: pageNum,
+            totalPages: Math.ceil(total / limitNum),
+            limit: limitNum,
+            data: submissions
+        });
+    } catch (error) {
+        next(error);
+    }
+}

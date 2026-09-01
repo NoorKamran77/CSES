@@ -1,11 +1,19 @@
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
-import * as problemController from "../controllers/problemController.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
+import * as problemController from "../controllers/problemController.js";
 
 const problemRouter = express.Router();
-problemRouter.use(requireAuth);
-problemRouter.post("/", requireAdmin, problemController.create);
+
+// Public routes
 problemRouter.get("/", problemController.fetch);
-problemRouter.get("/:slug", problemController.getBySlug)
-export default problemRouter;
+problemRouter.get("/:slug", problemController.getBySlug);
+problemRouter.get("/:slug/samples", problemController.getSamples);
+
+// Admin-only routes
+problemRouter.post("/", requireAuth, requireAdmin, problemController.create);
+problemRouter.put("/:slug", requireAuth, requireAdmin, problemController.update);
+problemRouter.delete("/:slug", requireAuth, requireAdmin, problemController.deleteProblem);
+problemRouter.post("/:slug/testcases", requireAuth, requireAdmin, problemController.saveTestcases);
+
+export default problemRouter;

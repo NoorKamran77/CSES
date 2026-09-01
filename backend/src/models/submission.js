@@ -4,14 +4,14 @@ const submissionSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "userModel",
+            ref: "User",
             required: true,
             index: true,
         },
 
         problemId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "problemModel",
+            ref: "Problem",
             required: true,
             index: true,
         },
@@ -73,5 +73,5 @@ const submissionSchema = new mongoose.Schema(
 submissionSchema.index({ userId: 1, createdAt: -1 });
 submissionSchema.index({ problemId: 1, createdAt: -1 });
 
-const submissionModel = new mongoose.model("Submissions", submissionSchema);
-export default submissionModel;
+const submissionModel = mongoose.models.Submission || mongoose.model("Submission", submissionSchema);
+export default submissionModel;

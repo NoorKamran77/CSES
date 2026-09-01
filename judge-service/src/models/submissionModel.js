@@ -3,12 +3,12 @@ import mongoose from "mongoose";
 const submissionSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "userModel",
+        ref: "User",
         required: true,
     },
     problemId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "problemModel",
+        ref: "Problem",
         required: true,
     },
     language: {
@@ -22,14 +22,40 @@ const submissionSchema = new mongoose.Schema({
     },
     status: {
         type: String,
+        enum: [
+            "Pending",
+            "Queued",
+            "Compiling",
+            "Running",
+            "Accepted",
+            "Wrong Answer",
+            "Compilation Error",
+            "Runtime Error",
+            "Time Limit Exceeded",
+            "Memory Limit Exceeded",
+            "Internal Error",
+        ],
         default: "Pending",
     },
-    executionTime: Number,
-    memoryUsed: Number,
-    compilerOutput: String,
-    errorMessage: String,
+    executionTime: {
+        type: Number,
+        default: 0,
+    },
+    memoryUsed: {
+        type: Number,
+        default: 0,
+    },
+    compilerOutput: {
+        type: String,
+        default: "",
+    },
+    errorMessage: {
+        type: String,
+        default: "",
+    },
 }, {
     timestamps: true,
 });
 
-export default mongoose.model("Submissions", submissionSchema);
+const submissionModel = mongoose.models.Submission || mongoose.model("Submission", submissionSchema);
+export default submissionModel;

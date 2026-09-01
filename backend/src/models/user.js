@@ -3,33 +3,34 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
-        require: true,
+        required: true,
         unique: true,
+        trim: true,
     },
     email: {
         type: String,
-        require: true,
+        required: true,
         unique: true,
+        lowercase: true,
+        trim: true,
     },
     password: {
         type: String,
-        require: true
+        required: true,
     },
     role: {
         type: String,
         enum: ["user", "admin"],
         default: "user",
-        require: true
+        required: true,
     },
-    solvedProblems: {
-        type: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Problem",
-            },
-        ],
-        default: [],
-    },
+    solvedProblems: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Problem",
+        },
+    ],
 }, { timestamps: true });
-const userModel = new mongoose.model("Users", userSchema);
-export default userModel;
+
+const userModel = mongoose.models.User || mongoose.model("User", userSchema);
+export default userModel;

@@ -1,4 +1,7 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 async function connectDB() {
     try {
@@ -19,4 +22,4 @@ async function connectDB() {
     }
 }
 
-export default connectDB;
+export default connectDB;

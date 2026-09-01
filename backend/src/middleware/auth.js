@@ -15,7 +15,10 @@ export async function requireAuth(req, res, next) {
         const token = tokenFromHeader || tokenFromCookie;
 
         if (!token) {
-            return res.status(401).json({ message: "Unauthorized" });
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized: No token provided"
+            });
         }
 
         const accessTokenSecret =
@@ -24,9 +27,10 @@ export async function requireAuth(req, res, next) {
             process.env.jwt_secret;
 
         if (!accessTokenSecret) {
-            return res
-                .status(500)
-                .json({ message: "Access token secret is not configured" });
+            return res.status(500).json({
+                success: false,
+                message: "Access token secret is not configured"
+            });
         }
 
         const decoded = jwt.verify(token, accessTokenSecret);
@@ -37,13 +41,20 @@ export async function requireAuth(req, res, next) {
             .select("-password");
 
         if (!user) {
-            return res.status(401).json({ message: "User not found" });
+            return res.status(401).json({
+                success: false,
+                message: "User not found"
+            });
         }
 
         req.user = user;
 
         next();
     } catch (error) {
-        return res.status(401).json({ message: "Invalid or expired token" });
+        return res.status(401).json({
+            success: false,
+            message: "Invalid or expired token",
+            error: error.message
+        });
     }
-}
+}

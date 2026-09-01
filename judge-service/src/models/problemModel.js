@@ -17,6 +17,26 @@ const problemSchema = new mongoose.Schema(
             trim: true,
         },
 
+        description: {
+            type: String,
+            default: "",
+        },
+
+        inputFormat: {
+            type: String,
+            default: "",
+        },
+
+        outputFormat: {
+            type: String,
+            default: "",
+        },
+
+        constraints: {
+            type: String,
+            default: "",
+        },
+
         storagePath: {
             type: String,
             required: true,
@@ -64,7 +84,7 @@ const problemSchema = new mongoose.Schema(
 
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "userModel",
+            ref: "User",
             required: true,
         },
 
@@ -78,6 +98,6 @@ const problemSchema = new mongoose.Schema(
     }
 );
 
-const problemModel = mongoose.model("Problems", problemSchema);
+const problemModel = mongoose.models.Problem || mongoose.model("Problem", problemSchema);
 
-export default problemModel;
+export default problemModel;
