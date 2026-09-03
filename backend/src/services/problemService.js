@@ -61,6 +61,8 @@ export async function create(problemData, user) {
         timeLimit: Number(problemData.timeLimit) || 1000,
         memoryLimit: Number(problemData.memoryLimit) || 256,
         checkerType: problemData.checkerType || "exact",
+        category: problemData.category ? String(problemData.category).trim() : "Introductory Problems",
+        order: Number(problemData.order) || 0,
         storagePath,
         createdBy: user._id,
         isPublished: problemData.isPublished !== undefined ? Boolean(problemData.isPublished) : true,
@@ -74,15 +76,62 @@ export async function fetch(filters = {}) {
     if (filters.difficulty) {
         query.difficulty = filters.difficulty;
     }
+    if (filters.category) {
+        query.category = filters.category;
+    }
     if (filters.isPublished !== undefined) {
         query.isPublished = filters.isPublished;
     }
 
     const problems = await problemModel.find(query)
         .populate("createdBy", "username email")
-        .sort({ createdAt: -1 });
+        .sort({ order: 1, createdAt: -1 });
 
     return problems;
+}
+
+export async function getGroupedByCategory(user = null) {
+    const problems = await problemModel.find({ isPublished: true })
+        .select("title slug difficulty category order tags timeLimit memoryLimit")
+        .sort({ category: 1, order: 1, createdAt: 1 });
+
+    const solvedSet = new Set(
+        user?.solvedProblems ? user.solvedProblems.map((id) => id.toString()) : []
+    );
+
+    const groupedMap = new Map();
+
+    for (const prob of problems) {
+        const cat = prob.category || "Introductory Problems";
+        if (!groupedMap.has(cat)) {
+            groupedMap.set(cat, []);
+        }
+
+        groupedMap.get(cat).push({
+            id: prob._id,
+            title: prob.title,
+            slug: prob.slug,
+            difficulty: prob.difficulty,
+            order: prob.order,
+            tags: prob.tags,
+            timeLimit: prob.timeLimit,
+            memoryLimit: prob.memoryLimit,
+            isSolved: solvedSet.has(prob._id.toString()),
+        });
+    }
+
+    const result = [];
+    for (const [category, problemList] of groupedMap.entries()) {
+        const solvedCount = problemList.filter((p) => p.isSolved).length;
+        result.push({
+            category,
+            totalCount: problemList.length,
+            solvedCount,
+            problems: problemList,
+        });
+    }
+
+    return result;
 }
 
 export async function getBySlug(slug) {
@@ -109,6 +158,8 @@ export async function update(slug, updateData) {
         "outputFormat",
         "constraints",
         "difficulty",
+        "category",
+        "order",
         "tags",
         "timeLimit",
         "memoryLimit",
@@ -125,6 +176,7 @@ export async function update(slug, updateData) {
     await problem.save();
     return problem;
 }
+
 
 export async function deleteProblem(slug) {
     const problem = await problemModel.findOneAndDelete({ slug });

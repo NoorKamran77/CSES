@@ -57,4 +57,44 @@ export async function requireAuth(req, res, next) {
             error: error.message
         });
     }
-}
+}
+
+export async function optionalAuth(req, res, next) {
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        const tokenFromHeader = authHeader?.startsWith("Bearer ")
+            ? authHeader.slice(7).trim()
+            : null;
+        const tokenFromCookie =
+            req.cookies?.accesstoken || req.cookies?.accessToken;
+        const token = tokenFromHeader || tokenFromCookie;
+
+        if (!token) {
+            return next();
+        }
+
+        const accessTokenSecret =
+            process.env.ACCESS_TOKEN_SECRET ||
+            process.env.JWT_SECRET ||
+            process.env.jwt_secret;
+
+        if (!accessTokenSecret) {
+            return next();
+        }
+
+        const decoded = jwt.verify(token, accessTokenSecret);
+        const user = await userModel
+            .findById(decoded.userId)
+            .select("-password");
+
+        if (user) {
+            req.user = user;
+        }
+
+        next();
+    } catch {
+        // If token is invalid or expired, continue as guest
+        next();
+    }
+}
+

@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import authRouter from "./routes/authRoute.js";
 import problemRouter from "./routes/problemRoute.js";
 import submissionRouter from "./routes/submissionRoute.js";
+import adminRouter from "./routes/adminRoute.js";
 import submissionQueue from "./queue/submissionQueue.js";
 
 const app = express();
@@ -40,6 +41,8 @@ app.get("/test", async (req, res) => {
 app.use("/auth", authRouter);
 app.use("/problem", problemRouter);
 app.use("/submit", submissionRouter);
+app.use("/admin", adminRouter);
+
 
 // 404 handler
 app.use((req, res, next) => {

@@ -33,6 +33,21 @@ export async function fetch(req, res, next) {
     }
 }
 
+export async function getGrouped(req, res, next) {
+    try {
+        const sections = await ProblemService.getGroupedByCategory(req.user);
+
+        return res.status(200).json({
+            success: true,
+            sectionsCount: sections.length,
+            sections,
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+
 export async function getBySlug(req, res, next) {
     try {
         const { slug } = req.params;

@@ -56,7 +56,20 @@ const problemSchema = new mongoose.Schema(
             },
         ],
 
+        category: {
+            type: String,
+            default: "Introductory Problems",
+            trim: true,
+            index: true,
+        },
+
+        order: {
+            type: Number,
+            default: 0,
+        },
+
         timeLimit: {
+
             type: Number,
             default: 1000,
         },
