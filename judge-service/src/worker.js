@@ -1,21 +1,51 @@
 import { Worker } from "bullmq";
 import connection from "./config/redis.js";
 import connectDB from "./config/db.js";
-import submissionModel from "./models/submissionModel.js";
-import problemModel from "./models/problemModel.js";
+import { judge } from "./judge/judgeEngine.js";
+
+// Connect to MongoDB
 connectDB();
+
+const CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || "2", 10);
+
+console.log(`[JudgeWorker] Starting submission worker with concurrency: ${CONCURRENCY}`);
+
 const worker = new Worker(
     "submission-queue",
     async (job) => {
-        const submission = await submissionModel.findById(job.data.submissionId);
-        if (!submission) {
-            throw new Error("Submission not found");
+        const { submissionId } = job.data;
+        if (!submissionId) {
+            console.warn(`[JudgeWorker] Job ${job.id} has no submissionId`);
+            return;
         }
-        const problem = await problemModel.findById(submission.problemId);
 
-        console.log(problem.storagePath);
-        console.log(submission.sourceCode);
-        console.log(submission.language);
+        console.log(`[JudgeWorker] Processing job ${job.id} -> Submission ID: ${submissionId}`);
+        await judge(submissionId);
     },
-    { connection }
+    {
+        connection,
+        concurrency: CONCURRENCY,
+    }
 );
+
+worker.on("ready", () => {
+    console.log("[JudgeWorker] Worker connected to Redis and ready to process submissions");
+});
+
+worker.on("completed", (job) => {
+    console.log(`[JudgeWorker] Job ${job.id} completed successfully`);
+});
+
+worker.on("failed", (job, err) => {
+    console.error(`[JudgeWorker] Job ${job?.id} failed:`, err.message);
+});
+
+worker.on("error", (err) => {
+    if (err.code === "ECONNREFUSED") {
+        // Suppress repeated stacktraces when Redis is offline
+    } else {
+        console.error("[JudgeWorker] Worker error:", err.message);
+    }
+});
+
+export default worker;
