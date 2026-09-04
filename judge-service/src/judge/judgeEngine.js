@@ -84,7 +84,6 @@ export async function judge(submissionId) {
         const problemStorageDir = path.join(storageRoot, "problems", problem.slug);
         const hiddenDir = path.join(problemStorageDir, "hidden");
         const samplesDir = path.join(problemStorageDir, "samples");
-
         let testCaseDir = hiddenDir;
         let testFiles = [];
 

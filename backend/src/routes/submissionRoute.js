@@ -8,7 +8,6 @@ submissionRouter.use(requireAuth);
 
 // Submit code for a problem
 submissionRouter.post("/:slug", submissionController.submit);
-submissionRouter.post("/:slug/submit", submissionController.submit); // backwards-compatible
 
 // Get user's own submissions
 submissionRouter.get("/my-submissions", submissionController.getMySubmissions);
