@@ -3,6 +3,7 @@
 # =========================================================
 
 services:
+
   # ---------------------------------------------------------
   # 1. Backend REST API
   # ---------------------------------------------------------
@@ -12,6 +13,7 @@ services:
     plan: free
     region: oregon
     rootDir: backend
+
     buildCommand: npm install
     startCommand: npm start
 
@@ -68,14 +70,14 @@ services:
 
 
   # ---------------------------------------------------------
-  # 3. Frontend SPA
+  # 3. Frontend Static Site
   # ---------------------------------------------------------
-  - type: static
+  - type: web
     name: cses-frontend
     runtime: static
-    plan: free
 
     rootDir: frontend
+
     buildCommand: npm install && npm run build
     staticPublishPath: dist
 
