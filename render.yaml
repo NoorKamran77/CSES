@@ -29,7 +29,6 @@ services:
   # =========================
   - type: static
     name: cses-frontend
-    runtime: static
     rootDir: frontend
 
     buildCommand: npm install && npm run build
