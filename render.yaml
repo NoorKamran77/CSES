@@ -1,11 +1,10 @@
 # =========================================================
 # Render Blueprint Specification for CSES Clone
-# Docs: https://render.com/docs/blueprint-spec
 # =========================================================
 
 services:
   # ---------------------------------------------------------
-  # 1. Backend REST API (Web Service)
+  # 1. Backend REST API
   # ---------------------------------------------------------
   - type: web
     name: cses-backend
@@ -15,72 +14,76 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
+
     envVars:
       - key: NODE_ENV
         value: production
+
       - key: PORT
-        value: 10000
+        value: "10000"
+
       - key: MONGODB_URI
         sync: false
+
       - key: REDIS_URI
         sync: false
+
       - key: ACCESS_TOKEN_SECRET
         generateValue: true
+
       - key: REFRESH_TOKEN_SECRET
         generateValue: true
+
       - key: CLIENT_URL
-        fromService:
-          type: web
-          name: cses-frontend
-          property: url
+        value: https://cses-frontend.onrender.com
+
 
   # ---------------------------------------------------------
-  # 2. Judge Worker (Background Worker with C++, Python, Java)
+  # 2. Judge Worker
   # ---------------------------------------------------------
   - type: worker
     name: cses-judge-service
     runtime: docker
     plan: free
     region: oregon
+
     dockerfilePath: judge-service/Dockerfile
     dockerContext: .
+
     envVars:
       - key: NODE_ENV
         value: production
+
       - key: USE_DOCKER
         value: "false"
+
       - key: MONGODB_URI
-        fromService:
-          type: web
-          name: cses-backend
-          envVarKey: MONGODB_URI
+        sync: false
+
       - key: REDIS_URI
-        fromService:
-          type: web
-          name: cses-backend
-          envVarKey: REDIS_URI
+        sync: false
+
       - key: STORAGE_PATH
         value: /app/storage
 
+
   # ---------------------------------------------------------
-  # 3. Frontend SPA (Static Site)
+  # 3. Frontend SPA
   # ---------------------------------------------------------
   - type: web
     name: cses-frontend
     runtime: static
     plan: free
-    region: oregon
+
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: cses-backend
-          property: url
-
+        value: https://cses-backend.onrender.com
