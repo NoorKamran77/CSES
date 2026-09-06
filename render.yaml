@@ -1,17 +1,10 @@
-# =========================================================
-# Render Blueprint Specification for CSES Clone
-# =========================================================
-
 services:
-
-  # ---------------------------------------------------------
-  # 1. Backend REST API
-  # ---------------------------------------------------------
+  # =========================
+  # BACKEND
+  # =========================
   - type: web
     name: cses-backend
     runtime: node
-    plan: free
-    region: oregon
     rootDir: backend
 
     buildCommand: npm install
@@ -21,71 +14,32 @@ services:
       - key: NODE_ENV
         value: production
 
-      - key: PORT
-        value: "10000"
-
-      - key: MONGODB_URI
+      - key: MONGO_URI
         sync: false
 
-      - key: REDIS_URI
+      - key: REDIS_URL
         sync: false
 
-      - key: ACCESS_TOKEN_SECRET
-        generateValue: true
-
-      - key: REFRESH_TOKEN_SECRET
-        generateValue: true
-
-      - key: CLIENT_URL
-        value: https://cses-frontend.onrender.com
-
-
-  # ---------------------------------------------------------
-  # 2. Judge Worker
-  # ---------------------------------------------------------
-  - type: worker
-    name: cses-judge-service
-    runtime: docker
-    plan: free
-    region: oregon
-
-    dockerfilePath: judge-service/Dockerfile
-    dockerContext: .
-
-    envVars:
-      - key: NODE_ENV
-        value: production
-
-      - key: USE_DOCKER
-        value: "false"
-
-      - key: MONGODB_URI
+      - key: JWT_SECRET
         sync: false
 
-      - key: REDIS_URI
-        sync: false
 
-      - key: STORAGE_PATH
-        value: /app/storage
-
-
-  # ---------------------------------------------------------
-  # 3. Frontend Static Site
-  # ---------------------------------------------------------
+  # =========================
+  # FRONTEND
+  # =========================
   - type: web
     name: cses-frontend
     runtime: static
-
     rootDir: frontend
 
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    staticPublishPath: ./dist
 
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
 
-    envVars:
-      - key: VITE_API_URL
-        value: https://cses-backend.onrender.com
+  # =========================
+  # REDIS / BULLMQ
+  # =========================
+  - type: keyvalue
+    name: cses-redis
+    plan: free
+    ipAllowList: []
