@@ -27,7 +27,7 @@ services:
   # =========================
   # FRONTEND
   # =========================
-  - type: web
+  - type: static
     name: cses-frontend
     runtime: static
     rootDir: frontend
