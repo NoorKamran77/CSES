@@ -1,23 +1,51 @@
 import { spawn } from "child_process";
 import os from "os";
+import { executeInDocker } from "./dockerExecutor.js";
 
 const isWindows = os.platform() === "win32";
 const MAX_BUFFER_SIZE = 5 * 1024 * 1024; // 5MB max output buffer
 
 /**
- * Executes a process with timeout, stdin input, and resource tracking.
- *
- * @param {Object} options
- * @param {string} options.command - The executable command
- * @param {Array<string>} options.args - Command line arguments
- * @param {string} options.cwd - Working directory
- * @param {string} [options.input] - Stdin input string
- * @param {number} [options.timeLimit=2000] - Timeout limit in milliseconds
- * @returns {Promise<{ exitCode: number|null, stdout: string, stderr: string, executionTimeMs: number, isTimeLimitExceeded: boolean, error: Error|null }>}
+ * Executes a process either inside a secure Docker sandbox or natively on host.
  */
-export function executeProcess({ command, args = [], cwd, input = "", timeLimit = 2000 }) {
+export async function executeProcess({
+    command,
+    args = [],
+    cwd,
+    input = "",
+    timeLimit = 2000,
+    memoryLimit = 256,
+    isDocker = false,
+    isReadOnly = true,
+}) {
+    if (isDocker) {
+        return executeInDocker({
+            tempDir: cwd,
+            command,
+            args,
+            input,
+            timeLimit,
+            memoryLimit,
+            isReadOnly,
+        });
+    }
+
+    return executeHostProcess({
+        command,
+        args,
+        cwd,
+        input,
+        timeLimit,
+    });
+}
+
+/**
+ * Executes a process natively on host with timeout, stdin input, and resource tracking.
+ */
+export function executeHostProcess({ command, args = [], cwd, input = "", timeLimit = 2000 }) {
     return new Promise((resolve) => {
         const startTime = process.hrtime.bigint();
+
         let isTimeLimitExceeded = false;
         let stdout = "";
         let stderr = "";

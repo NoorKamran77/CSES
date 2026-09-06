@@ -40,7 +40,8 @@ export async function judge(submissionId) {
             return;
         }
 
-        console.log(`[JudgeEngine] Judging submission ${submissionId} for problem '${problem.slug}' (${submission.language})`);
+        const isDocker = process.env.USE_DOCKER === "true";
+        console.log(`[JudgeEngine] Judging submission ${submissionId} for problem '${problem.slug}' (${submission.language}) [Sandbox: ${isDocker ? "Docker" : "Host"}]`);
 
         // Set status to Compiling
         await submissionModel.findByIdAndUpdate(submissionId, { status: "Compiling" });
@@ -55,12 +56,15 @@ export async function judge(submissionId) {
 
         // 1. Compilation Phase (if needed)
         if (langConfig.needsCompile) {
-            const { command, args, cwd } = langConfig.getCompileCommand(tempDir);
+            const { command, args, cwd } = langConfig.getCompileCommand(tempDir, isDocker);
             const compileResult = await executeProcess({
                 command,
                 args,
                 cwd,
                 timeLimit: 15000, // 15s max compilation time
+                memoryLimit: 512, // 512MB for compiler
+                isDocker,
+                isReadOnly: false, // Compiler needs write access to output binary
             });
 
             if (compileResult.exitCode !== 0 || compileResult.isTimeLimitExceeded) {
@@ -84,6 +88,7 @@ export async function judge(submissionId) {
         const problemStorageDir = path.join(storageRoot, "problems", problem.slug);
         const hiddenDir = path.join(problemStorageDir, "hidden");
         const samplesDir = path.join(problemStorageDir, "samples");
+
         let testCaseDir = hiddenDir;
         let testFiles = [];
 
@@ -130,6 +135,7 @@ export async function judge(submissionId) {
         let finalVerdict = "Accepted";
         let errorMessage = "";
         const timeLimit = problem.timeLimit || 1000;
+        const memoryLimit = problem.memoryLimit || 256;
 
         for (let i = 0; i < testFiles.length; i++) {
             const inFile = testFiles[i];
@@ -144,13 +150,16 @@ export async function judge(submissionId) {
                 // out file might not exist
             }
 
-            const { command, args, cwd } = langConfig.getRunCommand(tempDir);
+            const { command, args, cwd } = langConfig.getRunCommand(tempDir, isDocker);
             const runResult = await executeProcess({
                 command,
                 args,
                 cwd,
                 input: inputContent,
                 timeLimit,
+                memoryLimit,
+                isDocker,
+                isReadOnly: true, // Untrusted user code gets read-only access
             });
 
             maxExecutionTime = Math.max(maxExecutionTime, runResult.executionTimeMs);
@@ -159,6 +168,13 @@ export async function judge(submissionId) {
             if (runResult.isTimeLimitExceeded) {
                 finalVerdict = "Time Limit Exceeded";
                 errorMessage = `Time Limit Exceeded on testcase ${i + 1}`;
+                break;
+            }
+
+            // Check Memory Limit Exceeded
+            if (runResult.stderr && runResult.stderr.includes("Memory Limit Exceeded")) {
+                finalVerdict = "Memory Limit Exceeded";
+                errorMessage = `Memory Limit Exceeded on testcase ${i + 1}`;
                 break;
             }
 
@@ -177,6 +193,7 @@ export async function judge(submissionId) {
                 break;
             }
         }
+
 
         console.log(`[JudgeEngine] Submission ${submissionId} -> Verdict: ${finalVerdict} (Max Time: ${maxExecutionTime}ms)`);
 

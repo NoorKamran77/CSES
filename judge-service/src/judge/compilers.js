@@ -8,18 +8,18 @@ export const LANGUAGE_CONFIG = {
         name: "C++ (GCC)",
         sourceFileName: "solution.cpp",
         needsCompile: true,
-        getCompileCommand: (dir) => {
-            const outputExecutable = isWindows ? "solution.exe" : "solution";
+        getCompileCommand: (dir, isDocker = false) => {
+            const outputExecutable = !isDocker && isWindows ? "solution.exe" : "solution";
             return {
                 command: "g++",
                 args: ["-O2", "-std=c++17", "solution.cpp", "-o", outputExecutable],
                 cwd: dir,
             };
         },
-        getRunCommand: (dir) => {
-            const executable = isWindows ? path.join(dir, "solution.exe") : `./solution`;
+        getRunCommand: (dir, isDocker = false) => {
+            const executable = !isDocker && isWindows ? path.join(dir, "solution.exe") : "./solution";
             return {
-                command: isWindows ? executable : "./solution",
+                command: executable,
                 args: [],
                 cwd: dir,
             };
@@ -30,9 +30,10 @@ export const LANGUAGE_CONFIG = {
         name: "Python 3",
         sourceFileName: "solution.py",
         needsCompile: false,
-        getRunCommand: (dir) => {
-            // Use 'python' or 'python3' based on environment
-            const pythonCmd = process.env.PYTHON_BIN || (isWindows ? "python" : "python3");
+        getRunCommand: (dir, isDocker = false) => {
+            const pythonCmd = isDocker
+                ? "python3"
+                : process.env.PYTHON_BIN || (isWindows ? "python" : "python3");
             return {
                 command: pythonCmd,
                 args: ["solution.py"],
@@ -82,4 +83,5 @@ export function getLanguageConfig(language) {
     }
     return config;
 }
+
 
