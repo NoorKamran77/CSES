@@ -10,14 +10,22 @@ import submissionQueue from "./queue/submissionQueue.js";
 
 const app = express();
 
+// Enable trust proxy for Render load balancers & secure cookies
+app.set("trust proxy", 1);
+
+const allowedOrigins = process.env.CLIENT_URL
+    ? process.env.CLIENT_URL.split(",").map((o) => o.trim())
+    : true;
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || true,
-    credentials: true
+    origin: allowedOrigins,
+    credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan("dev"));
+
 
 app.get("/test", async (req, res) => {
     try {
@@ -63,4 +71,4 @@ app.use((err, req, res, next) => {
     });
 });
 
-export default app;
+export default app;

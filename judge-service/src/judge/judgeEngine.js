@@ -8,6 +8,9 @@ import { executeProcess } from "./executor.js";
 import { checkOutput } from "./checker.js";
 
 function getStorageRoot() {
+    if (process.env.STORAGE_PATH) {
+        return path.resolve(process.env.STORAGE_PATH);
+    }
     // Check if we are running inside judge-service or project root
     const cwd = process.cwd();
     if (cwd.endsWith("judge-service") || cwd.endsWith("backend")) {
@@ -15,6 +18,7 @@ function getStorageRoot() {
     }
     return path.join(cwd, "storage");
 }
+
 
 function getTempRoot() {
     const cwd = process.cwd();

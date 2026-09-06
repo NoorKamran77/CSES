@@ -2,6 +2,14 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const AuthContext = createContext(null);
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+function getFullUrl(url) {
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${API_BASE_URL}${path}`;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +28,7 @@ export function AuthProvider({ children }) {
       options.body = JSON.stringify(options.body);
     }
 
-    const res = await fetch(url, {
+    const res = await fetch(getFullUrl(url), {
       ...options,
       headers,
       credentials: 'include',
@@ -38,9 +46,12 @@ export function AuthProvider({ children }) {
         setUser(data.user);
       } else {
         // Try refresh token if access token failed
-        const refreshRes = await fetch('/auth/refresh', {
+        const storedRefreshToken = localStorage.getItem('cses_refresh_token');
+        const refreshRes = await fetch(getFullUrl('/auth/refresh'), {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          body: JSON.stringify({ refreshToken: storedRefreshToken || undefined }),
         });
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
@@ -48,6 +59,7 @@ export function AuthProvider({ children }) {
           setUser(refreshData.user);
         } else {
           localStorage.removeItem('cses_token');
+          localStorage.removeItem('cses_refresh_token');
           setUser(null);
         }
       }
@@ -63,7 +75,7 @@ export function AuthProvider({ children }) {
   }, [fetchMe]);
 
   const login = async (email, password) => {
-    const res = await fetch('/auth/login', {
+    const res = await fetch(getFullUrl('/auth/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -76,12 +88,15 @@ export function AuthProvider({ children }) {
     }
 
     localStorage.setItem('cses_token', data.accesstoken);
+    if (data.refreshtoken) {
+      localStorage.setItem('cses_refresh_token', data.refreshtoken);
+    }
     setUser(data.user);
     return data.user;
   };
 
   const register = async (username, email, password) => {
-    const res = await fetch('/auth/register', {
+    const res = await fetch(getFullUrl('/auth/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password }),
@@ -98,7 +113,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await fetch('/auth/logout', {
+      await fetch(getFullUrl('/auth/logout'), {
         method: 'POST',
         credentials: 'include',
       });
@@ -106,6 +121,7 @@ export function AuthProvider({ children }) {
       // Ignore network errors on logout
     }
     localStorage.removeItem('cses_token');
+    localStorage.removeItem('cses_refresh_token');
     setUser(null);
   };
 
@@ -113,6 +129,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{ user, loading, login, register, logout, apiFetch, refreshUser: fetchMe }}>
       {children}
     </AuthContext.Provider>
+
   );
 }
 

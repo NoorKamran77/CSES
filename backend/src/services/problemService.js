@@ -18,15 +18,17 @@ function sanitizeSlug(slug) {
 
 export function getProblemStorageFullPath(slug) {
     const storagePath = path.posix.join("storage", "problems", slug);
-    // Find project root (one level up if run from backend, or current dir if run from root)
-    const baseDir = process.cwd().endsWith("backend") || process.cwd().endsWith("judge-service")
-        ? path.resolve(process.cwd(), "..")
-        : process.cwd();
+    const baseDir = process.env.STORAGE_PATH
+        ? path.resolve(process.env.STORAGE_PATH)
+        : (process.cwd().endsWith("backend") || process.cwd().endsWith("judge-service")
+            ? path.resolve(process.cwd(), "..", "storage")
+            : path.join(process.cwd(), "storage"));
     return {
         storagePath,
-        fullPath: path.join(baseDir, "storage", "problems", slug)
+        fullPath: path.join(baseDir, "problems", slug)
     };
 }
+
 
 export async function create(problemData, user) {
     const title = String(problemData.title || "").trim();
@@ -277,4 +279,4 @@ export async function saveTestcases(slug, type, testcases) {
         count,
         problem
     };
-}
+}
