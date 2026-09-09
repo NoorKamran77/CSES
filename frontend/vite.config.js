@@ -11,7 +11,9 @@ export default defineConfig({
       '/problem': 'http://localhost:5000',
       '/submit': 'http://localhost:5000',
       '/admin': 'http://localhost:5000',
+      '/judge': 'http://localhost:5000',
     },
   },
 })
+
 

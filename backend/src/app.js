@@ -7,6 +7,8 @@ import problemRouter from "./routes/problemRoute.js";
 import submissionRouter from "./routes/submissionRoute.js";
 import adminRouter from "./routes/adminRoute.js";
 import submissionQueue from "./queue/submissionQueue.js";
+import connection from "./config/redis.js";
+
 
 const app = express();
 
@@ -50,6 +52,23 @@ app.use("/auth", authRouter);
 app.use("/problem", problemRouter);
 app.use("/submit", submissionRouter);
 app.use("/admin", adminRouter);
+
+// Judge worker status — checks Redis heartbeat set by local judge-service
+app.get("/judge/status", async (req, res) => {
+    try {
+        const val = await connection.get("judge:heartbeat");
+        if (!val) {
+            return res.json({ online: false });
+        }
+        const lastBeat = parseInt(val, 10);
+        const ageMs = Date.now() - lastBeat;
+        // Consider online if heartbeat was within the last 30 seconds
+        const online = ageMs < 30_000;
+        return res.json({ online, lastSeenMs: ageMs });
+    } catch {
+        return res.json({ online: false });
+    }
+});
 
 
 // 404 handler
