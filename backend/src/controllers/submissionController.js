@@ -2,6 +2,7 @@ import submissionModel from "../models/submission.js";
 import problemModel from "../models/problem.js";
 import mongoose from "mongoose";
 import submissionQueue from "../queue/submissionQueue.js";
+import connection from "../config/redis.js";
 
 const SUPPORTED_LANGUAGES = ["cpp", "python", "java", "javascript"];
 
@@ -29,6 +30,26 @@ export async function submit(req, res, next) {
             return res.status(404).json({
                 success: false,
                 message: "Problem not found"
+            });
+        }
+
+        // Check if judge worker is currently online via Redis heartbeat
+        let isJudgeOnline = false;
+        try {
+            const heartbeat = await connection.get("judge:heartbeat");
+            if (heartbeat) {
+                const ageMs = Date.now() - parseInt(heartbeat, 10);
+                isJudgeOnline = ageMs < 30_000;
+            }
+        } catch {
+            isJudgeOnline = false;
+        }
+
+        const allowOfflineQueue = process.env.ALLOW_OFFLINE_QUEUE === "true";
+        if (!isJudgeOnline && !allowOfflineQueue) {
+            return res.status(503).json({
+                success: false,
+                message: "Judge worker is currently offline. Submissions cannot be processed right now. Please ensure the judge worker is running on your PC."
             });
         }
 
@@ -190,4 +211,4 @@ export async function getMySubmissions(req, res, next) {
     } catch (error) {
         next(error);
     }
-}
+}

@@ -1,42 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-// How often to poll the backend for judge worker status (ms)
-const JUDGE_POLL_INTERVAL = 15_000;
-
-function useJudgeStatus(apiFetch) {
-  const [status, setStatus] = useState(null); // null = loading, true = online, false = offline
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const res = await apiFetch('/judge/status');
-        if (!res.ok) throw new Error('non-ok');
-        const data = await res.json();
-        if (!cancelled) setStatus(data.online);
-      } catch {
-        if (!cancelled) setStatus(false);
-      }
-    }
-
-    poll(); // immediate check on mount
-    const timer = setInterval(poll, JUDGE_POLL_INTERVAL);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [apiFetch]);
-
-  return status;
-}
+import { useJudgeStatus } from '../hooks/useJudgeStatus';
 
 export default function Navbar() {
-  const { user, logout, apiFetch } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const judgeOnline = useJudgeStatus(apiFetch);
+  const judgeOnline = useJudgeStatus();
 
   const handleLogout = async () => {
     await logout();

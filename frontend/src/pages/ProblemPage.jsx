@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useJudgeStatus } from '../hooks/useJudgeStatus';
 import VerdictBadge from '../components/VerdictBadge';
 
 export default function ProblemPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user, apiFetch } = useAuth();
+  const judgeOnline = useJudgeStatus();
 
   const [problem, setProblem] = useState(null);
   const [samples, setSamples] = useState([]);
@@ -86,6 +88,11 @@ export default function ProblemPage() {
     e.preventDefault();
     if (!user) {
       navigate('/login');
+      return;
+    }
+
+    if (judgeOnline === false) {
+      setSubmitError('Judge worker is currently offline. Submissions are paused until the judge server reconnects.');
       return;
     }
 
@@ -238,6 +245,20 @@ export default function ProblemPage() {
             <form onSubmit={handleSubmit} className="submit-form">
               {submitError && <div className="error-box">{submitError}</div>}
 
+              {judgeOnline === false && (
+                <div
+                  className="error-box"
+                  style={{
+                    backgroundColor: '#fff3e0',
+                    borderColor: '#ffb74d',
+                    color: '#e65100',
+                    marginBottom: '16px',
+                  }}
+                >
+                  ⚠️ <strong>Judge Service Offline:</strong> The judge worker on the host machine is currently offline. Submissions are temporarily paused until the worker connects.
+                </div>
+              )}
+
               <div className="form-group-inline">
                 <label htmlFor="language">Language:</label>
                 <select
@@ -269,8 +290,13 @@ export default function ProblemPage() {
               </div>
 
               <div className="submit-actions">
-                <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? 'Submitting...' : 'Submit Code'}
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={submitting || judgeOnline === false}
+                  style={judgeOnline === false ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                >
+                  {submitting ? 'Submitting...' : judgeOnline === false ? 'Judge Offline — Cannot Submit' : 'Submit Code'}
                 </button>
               </div>
             </form>

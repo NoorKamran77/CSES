@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useJudgeStatus } from '../hooks/useJudgeStatus';
 import VerdictBadge from '../components/VerdictBadge';
 
 export default function SubmissionPage() {
   const { id } = useParams();
   const { apiFetch } = useAuth();
+  const judgeOnline = useJudgeStatus();
 
   const [submission, setSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,9 +40,10 @@ export default function SubmissionPage() {
       const sub = await fetchSubmission();
       if (!isMounted) return;
 
-      // If submission is still processing, poll again in 1.5s
+      // If submission is still processing, poll again (slower if judge is offline)
       if (sub && ['Pending', 'Queued', 'Compiling', 'Running'].includes(sub.status)) {
-        pollTimerRef.current = setTimeout(poll, 1500);
+        const interval = judgeOnline === false ? 4000 : 1500;
+        pollTimerRef.current = setTimeout(poll, interval);
       }
     }
 
@@ -52,7 +55,7 @@ export default function SubmissionPage() {
         clearTimeout(pollTimerRef.current);
       }
     };
-  }, [id]);
+  }, [id, judgeOnline]);
 
   const handleCopyCode = () => {
     if (submission?.sourceCode) {
@@ -93,6 +96,20 @@ export default function SubmissionPage() {
       </div>
 
       <div className="submission-card">
+        {isProcessing && judgeOnline === false && (
+          <div
+            className="error-box"
+            style={{
+              backgroundColor: '#fff3e0',
+              borderColor: '#ffb74d',
+              color: '#e65100',
+              marginBottom: '20px',
+            }}
+          >
+            ⚠️ <strong>Judge Worker Offline:</strong> The judge service on the host machine is currently offline. Your submission is waiting in the queue and will be processed automatically as soon as the judge worker connects.
+          </div>
+        )}
+
         <div className="submission-meta-grid">
           <div className="meta-item">
             <span className="meta-label">Problem:</span>
@@ -111,7 +128,15 @@ export default function SubmissionPage() {
             <span className="meta-label">Verdict:</span>
             <span className="meta-value">
               <VerdictBadge status={submission.status} />
-              {isProcessing && <span className="processing-hint">Judging in progress...</span>}
+              {isProcessing && (
+                judgeOnline === false ? (
+                  <span className="processing-hint" style={{ color: '#e65100' }}>
+                    Judge offline — queued
+                  </span>
+                ) : (
+                  <span className="processing-hint">Judging in progress...</span>
+                )
+              )}
             </span>
           </div>
 
