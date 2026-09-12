@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // How often to poll the backend for judge worker status (ms)
 const JUDGE_POLL_INTERVAL = 15_000;
 
-function useJudgeStatus() {
+function useJudgeStatus(apiFetch) {
   const [status, setStatus] = useState(null); // null = loading, true = online, false = offline
 
   useEffect(() => {
@@ -13,7 +13,7 @@ function useJudgeStatus() {
 
     async function poll() {
       try {
-        const res = await fetch('/judge/status');
+        const res = await apiFetch('/judge/status');
         if (!res.ok) throw new Error('non-ok');
         const data = await res.json();
         if (!cancelled) setStatus(data.online);
@@ -28,15 +28,15 @@ function useJudgeStatus() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, []);
+  }, [apiFetch]);
 
   return status;
 }
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, apiFetch } = useAuth();
   const navigate = useNavigate();
-  const judgeOnline = useJudgeStatus();
+  const judgeOnline = useJudgeStatus(apiFetch);
 
   const handleLogout = async () => {
     await logout();
@@ -69,7 +69,7 @@ export default function Navbar() {
           }>
             <span
               className={`judge-dot ${judgeOnline === null ? 'judge-dot--loading' :
-                  judgeOnline ? 'judge-dot--online' : 'judge-dot--offline'
+                judgeOnline ? 'judge-dot--online' : 'judge-dot--offline'
                 }`}
             />
             <span className="judge-label">
